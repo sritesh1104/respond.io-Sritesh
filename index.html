@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retention Copilot — AI prototype for respond.io</title>
+<style>
+  :root{
+    --bg:#f5f6fa; --card:#ffffff; --border:#e4e6ee; --text:#1c1f2b; --sub:#6b7080; --muted:#9498a5;
+    --accent:#4f46e5; --accent-light:#eeecfd; --accent-dark:#3730a3;
+    --green:#0f8a5f; --green-bg:#e4f7ee;
+    --amber:#b26a00; --amber-bg:#fff3dc;
+    --red:#c0362c; --red-bg:#fdeceb;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .shell{max-width:920px;margin:0 auto;padding:28px 24px 64px;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;}
+  .brand .name{font-weight:600;font-size:16px;}
+  .brand .tag{font-size:12px;color:var(--sub);}
+  .credit{font-size:12px;color:var(--muted);text-align:right;line-height:1.5;}
+  .credit b{color:var(--sub);}
+
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:22px;}
+  .tab{padding:10px 16px;font-size:14px;font-weight:600;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+  .kpi .label{font-size:12px;color:var(--sub);margin-bottom:6px;}
+  .kpi .value{font-size:22px;font-weight:700;}
+  .kpi .value.red{color:var(--red);}
+  .kpi .value.green{color:var(--green);}
+
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:18px;}
+  .panel h3{margin:0 0 4px;font-size:14px;}
+  .panel p.sub{margin:0 0 14px;font-size:12.5px;color:var(--sub);}
+  .sliders{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .slider-row label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;}
+  .slider-row label span:last-child{font-weight:600;color:var(--accent);}
+  input[type=range]{width:100%;accent-color:var(--accent);}
+
+  .filters{display:flex;gap:8px;margin-bottom:14px;}
+  .chip{border:1px solid var(--border);background:var(--card);padding:6px 14px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer;}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  .account{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+  .account-head{display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer;}
+  .account-head .avatar{width:36px;height:36px;border-radius:8px;background:var(--accent-light);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+  .account-head .info{flex:1;min-width:0;}
+  .account-head .info .top{display:flex;align-items:center;gap:8px;}
+  .account-head .name{font-weight:600;font-size:14px;}
+  .account-head .plan{font-size:11px;color:var(--sub);background:var(--bg);padding:2px 8px;border-radius:6px;}
+  .account-head .mrr{font-size:12.5px;color:var(--sub);margin-top:2px;}
+  .badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;}
+  .badge.HIGH{background:var(--red-bg);color:var(--red);}
+  .badge.MEDIUM{background:var(--amber-bg);color:var(--amber);}
+  .badge.LOW{background:var(--green-bg);color:var(--green);}
+  .score{font-size:13px;font-weight:700;width:36px;text-align:right;}
+  .chevron{color:var(--muted);font-size:12px;transition:transform .15s;}
+  .account.open .chevron{transform:rotate(90deg);}
+
+  .account-body{display:none;padding:0 16px 16px 66px;border-top:1px solid var(--border);}
+  .account.open .account-body{display:block;}
+  .snippet{background:var(--bg);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--text);margin:12px 0;font-style:italic;border-left:3px solid var(--border);}
+  .reasons{margin:0 0 12px;padding-left:18px;font-size:13px;color:var(--sub);}
+  .reasons li{margin-bottom:4px;}
+  .action-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .next-action{font-size:13px;background:var(--accent-light);color:var(--accent-dark);padding:8px 12px;border-radius:8px;font-weight:600;}
+  .review-btn{border:1px solid var(--border);background:#fff;padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--text);}
+  .review-btn.done{background:var(--green-bg);border-color:var(--green-bg);color:var(--green);}
+
+  .brief h2{font-size:17px;margin:24px 0 8px;}
+  .brief h2:first-child{margin-top:0;}
+  .brief p{font-size:14px;line-height:1.65;color:var(--text);margin:0 0 10px;}
+  .brief ul{margin:0 0 10px;padding-left:20px;font-size:14px;line-height:1.6;}
+  .brief .meta{font-size:12.5px;color:var(--sub);background:var(--accent-light);color:var(--accent-dark);display:inline-block;padding:6px 12px;border-radius:8px;margin-bottom:18px;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark">R</div>
+      <div>
+        <div class="name">Retention Copilot</div>
+        <div class="tag">AI feature prototype for respond.io</div>
+      </div>
+    </div>
+    <div class="credit"><b>Sritesh Naidu</b><br>Product Manager (AI) on a Customer Experience (CX) Problem — Prototype</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="demo">Live demo</div>
+    <div class="tab" data-tab="brief">Product brief</div>
+  </div>
+
+  <div id="demo-view">
+    <div class="kpis">
+      <div class="kpi"><div class="label">Accounts monitored</div><div class="value" id="kpi-total">–</div></div>
+      <div class="kpi"><div class="label">Flagged at risk</div><div class="value red" id="kpi-risk">–</div></div>
+      <div class="kpi"><div class="label">NRR at risk</div><div class="value red" id="kpi-mrr">–</div></div>
+      <div class="kpi"><div class="label">Reviewed this week</div><div class="value green" id="kpi-reviewed">–</div></div>
+    </div>
+
+    <div class="panel">
+      <h3>Model weights</h3>
+      <p class="sub">Adjust how much each signal contributes to the risk score — this is the tunable layer a CX or growth PM would calibrate against real outcomes.</p>
+      <div class="sliders">
+        <div class="slider-row">
+          <label><span>Support sentiment</span><span id="w-sent-out">30%</span></label>
+          <input type="range" id="w-sent" min="0" max="100" value="30" step="5">
+        </div>
+        <div class="slider-row">
+          <label><span>Usage decline</span><span id="w-usage-out">30%</span></label>
+          <input type="range" id="w-usage" min="0" max="100" value="30" step="5">
+        </div>
+        <div class="slider-row">
+          <label><span>Response latency</span><span id="w-lat-out">20%</span></label>
+          <input type="range" id="w-lat" min="0" max="100" value="20" step="5">
+        </div>
+        <div class="slider-row">
+          <label><span>Negative-intent language</span><span id="w-kw-out">20%</span></label>
+          <input type="range" id="w-kw" min="0" max="100" value="20" step="5">
+        </div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="chip active" data-filter="ALL">All accounts</div>
+      <div class="chip" data-filter="HIGH">High risk</div>
+      <div class="chip" data-filter="MEDIUM">Medium risk</div>
+      <div class="chip" data-filter="LOW">Low risk</div>
+    </div>
+
+    <div id="account-list"></div>
+  </div>
+
+  <div id="brief-view" class="brief" style="display:none;">
+    <div class="meta">Written as a PM would scope this before a single line of code — problem, goal, metrics, approach, scope.</div>
+
+    <h2>Problem</h2>
+    <p>respond.io's CX and growth teams only find out an account is unhappy after it churns or contracts. The signals are already sitting in support conversations, product usage, and account activity — they're just scattered, unscored, and invisible until someone manually digs in during a churn post-mortem. That's reactive, not proactive, and it's exactly the gap the CX Program Manager role is asked to close when digging into why revenue from existing customers grows, shrinks, or disappears.</p>
+
+    <h2>Goal</h2>
+    <p>Give CX and growth teams a single, explainable view of which accounts are trending toward churn or contraction — early enough to actually intervene — by having AI synthesize sentiment, usage, and engagement signals into one risk score with a plain-language reason attached.</p>
+
+    <h2>Success metrics</h2>
+    <ul>
+      <li>Number of high-risk accounts contacted within 48 hours of being flagged</li>
+      <li>Reduction in "surprise" churn — accounts that cancel without ever being flagged</li>
+      <li>Retained-revenue uplift attributable to proactive saves vs. reactive win-backs</li>
+    </ul>
+    <p style="font-size:12.5px;color:var(--sub);margin-top:-4px;">Note: "NRR at risk" here is a snapshot proxy, not the textbook calculation — it's the share of current portfolio revenue sitting in flagged accounts, not revenue measured against a prior-period baseline. A production version would need a trailing period of actual billing data to compute true NRR. Only accounts flagged Medium or High risk count toward this figure — Low-risk accounts are excluded.</p>
+
+    <h2>How it works</h2>
+    <p><b>This prototype (v1):</b> a transparent, tunable heuristic model — sentiment trend in support conversations, usage decline, response latency, and negative-intent keywords — combined into a weighted score with the reasoning shown per account. Explainability is the point: a CS rep won't act on a black-box number, but they will act on "usage dropped 42% and they mentioned a competitor twice."</p>
+    <p><b>Production path (v2):</b> replace the heuristics with an LLM classifier prompted over full conversation history and usage telemetry, and add a feedback loop where reps mark flags accurate or not so the scoring recalibrates over time instead of running on fixed weights indefinitely.</p>
+
+    <h2>Scope</h2>
+    <p>Scope is deliberately narrow for v1 — the goal is to prove the scoring logic and the explainability pattern work before investing in the harder infrastructure around them.</p>
+    <p><b>In scope (v1) — built and demoable now:</b></p>
+    <ul>
+      <li>Risk scoring engine across four signals, with tunable weights</li>
+      <li>Explainable, plain-language reasoning attached to every flagged account</li>
+      <li>Suggested next-best-action per risk tier</li>
+      <li>Aggregate KPI tracking — accounts monitored, MRR exposure, reviews completed</li>
+    </ul>
+    <p><b>Out of scope (v1) — deferred on purpose, not forgotten:</b></p>
+    <ul>
+      <li>Live data pipeline — real usage and support data instead of the mock dataset, held back until the scoring logic itself is validated</li>
+      <li>Automated outreach — the system flags and suggests, a human still decides and acts, so customers don't get a robotic "we noticed you might churn" message</li>
+      <li>Continuous model retraining — no automatic weight updates yet; that needs the feedback loop and enough labeled outcomes to trust</li>
+    </ul>
+
+    <h2>Why this, why now</h2>
+    <p>It sits directly at the intersection of both roles I applied for: it's the kind of program a CX Program Manager Associate would investigate and run, and it's the kind of AI-accelerated growth feature a Product Manager (AI) would scope, build a case for, and ship. I built it to show the thinking, not just claim it.</p>
+  </div>
+
+</div>
+
+<script>
+const NEGATIVE_KEYWORDS = ["cancel","competitor","alternative","downgrade","expensive","cheaper","broken","switch","frustrat"];
+
+function countNegativeKeywords(text){
+  const t = text.toLowerCase();
+  return NEGATIVE_KEYWORDS.filter(k => t.includes(k));
+}
+
+const accounts = [
+  {name:"Northwind Apparel", plan:"Growth", mrr:1450, sentiment:0.22, usageDecline:48, latency:4.2,
+   snippet:"\"We've been looking at alternatives honestly. Support has gotten slower and the pricing feels expensive for what we're getting.\""},
+  {name:"Loop Fitness", plan:"Advanced", mrr:2600, sentiment:0.35, usageDecline:31, latency:2.8,
+   snippet:"\"Support took 3 days to get back to us on a broken workflow. It's the second time this quarter.\""},
+  {name:"Bright Grocer", plan:"Starter", mrr:480, sentiment:0.78, usageDecline:4, latency:0.6,
+   snippet:"\"Quick question about adding a new team member, otherwise things are running smoothly!\""},
+  {name:"Zenith Logistics", plan:"Enterprise", mrr:6200, sentiment:0.15, usageDecline:55, latency:3.5,
+   snippet:"\"We need to discuss our contract. Usage has dropped because half the team switched to a competitor tool, and honestly we're looking at cancelling if this continues.\""},
+  {name:"Petal & Bloom", plan:"Growth", mrr:1100, sentiment:0.61, usageDecline:9, latency:1.1,
+   snippet:"\"Loving the new workflow builder, saved us a ton of manual tagging.\""},
+  {name:"Vantage Realty", plan:"Advanced", mrr:2950, sentiment:0.28, usageDecline:22, latency:2.1,
+   snippet:"\"Pricing is a bit steep for our team size now. Might need to downgrade next renewal.\""},
+  {name:"CoreHealth Clinic", plan:"Enterprise", mrr:5400, sentiment:0.72, usageDecline:2, latency:0.4,
+   snippet:"\"Onboarding was smooth, our front desk team picked it up in a day.\""},
+  {name:"Fastlane Auto", plan:"Growth", mrr:1300, sentiment:0.19, usageDecline:39, latency:3.9,
+   snippet:"\"Cancel isn't off the table if this keeps happening. We've raised the same bug twice and it's honestly frustrating.\""},
+  {name:"Nimbus Cloud Co", plan:"Starter", mrr:520, sentiment:0.55, usageDecline:12, latency:1.4,
+   snippet:"\"Team's still getting used to it but nothing major to flag.\""},
+  {name:"Solstice Travel", plan:"Advanced", mrr:2400, sentiment:0.41, usageDecline:26, latency:2.6,
+   snippet:"\"We've had to work around the reporting limits more than we'd like, and it's starting to feel like the cheaper option elsewhere might make more sense.\""}
+];
+
+let filter = "ALL";
+let reviewed = new Set();
+
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+
+function computeRisk(acc, w){
+  const matchedKeywords = countNegativeKeywords(acc.snippet);
+  const sentSignal = 1 - acc.sentiment;
+  const usageSignal = clamp(acc.usageDecline/60,0,1);
+  const latSignal = clamp(acc.latency/5,0,1);
+  const kwSignal = clamp(matchedKeywords.length/3,0,1);
+  const totalW = w.sent + w.usage + w.lat + w.kw;
+  const score = Math.round(
+    ((sentSignal*w.sent + usageSignal*w.usage + latSignal*w.lat + kwSignal*w.kw) / totalW) * 100
+  );
+  let bucket = "LOW";
+  if(score >= 60) bucket = "HIGH";
+  else if(score >= 35) bucket = "MEDIUM";
+
+  const reasons = [];
+  if(sentSignal > 0.5) reasons.push("Support sentiment trending negative (score " + Math.round(acc.sentiment*100) + "/100)");
+  if(usageSignal > 0.3) reasons.push("Product usage down " + acc.usageDecline + "% over the last 30 days");
+  if(latSignal > 0.3) reasons.push("Average response delay of " + acc.latency + " days on their tickets");
+  if(matchedKeywords.length > 0) reasons.push(matchedKeywords.length + " negative-intent mention" + (matchedKeywords.length>1?"s":"") + " detected in conversation: \"" + matchedKeywords.join("\", \"") + "\"");
+  if(reasons.length === 0) reasons.push("No material risk signals detected this cycle");
+
+  let action = "Monitor — no action needed this cycle";
+  if(bucket === "HIGH") action = "Escalate to CSM for a save call within 48 hours";
+  else if(bucket === "MEDIUM") action = "Proactive check-in email + flag for QBR";
+
+  return {score, bucket, reasons, action};
+}
+
+function getWeights(){
+  return {
+    sent: +document.getElementById('w-sent').value,
+    usage: +document.getElementById('w-usage').value,
+    lat: +document.getElementById('w-lat').value,
+    kw: +document.getElementById('w-kw').value
+  };
+}
+
+function initials(name){
+  return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+}
+
+function render(){
+  const w = getWeights();
+  document.getElementById('w-sent-out').textContent = w.sent + '%';
+  document.getElementById('w-usage-out').textContent = w.usage + '%';
+  document.getElementById('w-lat-out').textContent = w.lat + '%';
+  document.getElementById('w-kw-out').textContent = w.kw + '%';
+
+  const scored = accounts.map(a => ({...a, ...computeRisk(a, w)}));
+  scored.sort((a,b) => b.score - a.score);
+
+  const list = document.getElementById('account-list');
+  list.innerHTML = '';
+
+  const visible = scored.filter(a => filter === 'ALL' || a.bucket === filter);
+  visible.forEach((a, idx) => {
+    const el = document.createElement('div');
+    el.className = 'account';
+    const isReviewed = reviewed.has(a.name);
+    el.innerHTML = `
+      <div class="account-head" data-name="${a.name}">
+        <div class="avatar">${initials(a.name)}</div>
+        <div class="info">
+          <div class="top"><span class="name">${a.name}</span><span class="plan">${a.plan}</span></div>
+          <div class="mrr">$${a.mrr.toLocaleString()} MRR</div>
+        </div>
+        <div class="badge ${a.bucket}">${a.bucket}</div>
+        <div class="score">${a.score}</div>
+        <div class="chevron">&#9656;</div>
+      </div>
+      <div class="account-body">
+        <div class="snippet">${a.snippet}</div>
+        <ul class="reasons">${a.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+        <div class="action-row">
+          <div class="next-action">Suggested: ${a.action}</div>
+          <button class="review-btn ${isReviewed?'done':''}" data-name="${a.name}">${isReviewed?'Reviewed':'Mark reviewed'}</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+
+  document.querySelectorAll('.account-head').forEach(h => {
+    h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
+  });
+  document.querySelectorAll('.review-btn').forEach(b => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const name = b.getAttribute('data-name');
+      if(reviewed.has(name)) reviewed.delete(name); else reviewed.add(name);
+      render();
+    });
+  });
+
+  document.getElementById('kpi-total').textContent = accounts.length;
+  const riskCount = scored.filter(a=>a.bucket!=='LOW').length;
+  document.getElementById('kpi-risk').textContent = riskCount;
+  const totalMrr = scored.reduce((s,a)=>s+a.mrr,0);
+  const mrrAtRisk = scored.filter(a=>a.bucket!=='LOW').reduce((s,a)=>s+a.mrr,0);
+  const exposurePct = totalMrr > 0 ? Math.round((mrrAtRisk/totalMrr)*100) : 0;
+  document.getElementById('kpi-mrr').textContent = exposurePct + '%';
+  document.getElementById('kpi-reviewed').textContent = reviewed.size;
+}
+
+document.querySelectorAll('input[type=range]').forEach(s => s.addEventListener('input', render));
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    filter = c.getAttribute('data-filter');
+    render();
+  });
+});
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    const tab = t.getAttribute('data-tab');
+    document.getElementById('demo-view').style.display = tab==='demo' ? 'block' : 'none';
+    document.getElementById('brief-view').style.display = tab==='brief' ? 'block' : 'none';
+  });
+});
+
+render();
+</script>
+</body>
+</html>
